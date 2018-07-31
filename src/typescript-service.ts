@@ -178,8 +178,13 @@ export class TypeScriptService {
     /**
      * Keeps track of package.jsons in the workspace
      */
-    protected packageManager: PackageManager
-
+    protected packageManager: PackageManager   
+    
+    /**
+     * The set of uris for all files currently open in the editor
+     */
+    public openFiles: Set<string>
+    
     /**
      * Settings synced though `didChangeConfiguration`
      */
@@ -213,6 +218,7 @@ export class TypeScriptService {
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         this.logger = new LSPLogger(client)
+        this.openFiles = new Set<string>()
     }
 
     /**
@@ -1546,7 +1552,8 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
         this.projectManager.didOpen(uri, params.textDocument.text)
         await new Promise<void>(resolve => setTimeout(resolve, 200))
-        this._publishDiagnostics(uri)
+        this.openFiles.add(uri)
+        this.publishDiagnostics()
     }
 
     /**
@@ -1568,7 +1575,7 @@ export class TypeScriptService {
         }
         this.projectManager.didChange(uri, text)
         await new Promise<void>(resolve => setTimeout(resolve, 200))
-        this._publishDiagnostics(uri)
+        this.publishDiagnostics()
     }
 
     /**
@@ -1607,6 +1614,10 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
         this.projectManager.didSave(uri)
     }
+    
+    public publishDiagnostics() {
+        this.openFiles.forEach(uri => this._publishDiagnostics(uri))
+    }
 
     /**
      * The document close notification is sent from the client to the server when the document got
@@ -1620,6 +1631,7 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
 
         this.projectManager.didClose(uri)
+        this.openFiles.delete(uri)
 
         // Clear diagnostics
         this.client.textDocumentPublishDiagnostics({ uri, diagnostics: [] })
