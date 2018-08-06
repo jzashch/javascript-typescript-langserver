@@ -181,11 +181,6 @@ export class TypeScriptService {
     protected packageManager: PackageManager   
     
     /**
-     * The set of uris for all files currently open in the editor
-     */
-    public openFiles: Set<string>
-    
-    /**
      * Settings synced though `didChangeConfiguration`
      */
     protected settings: Settings = {
@@ -218,8 +213,6 @@ export class TypeScriptService {
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         this.logger = new LSPLogger(client)
-        this.openFiles = new Set<string>()
-    }
 
     /**
      * The initialize request is sent as the first request from the client to the server. If the
@@ -1552,8 +1545,12 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
         this.projectManager.didOpen(uri, params.textDocument.text)
         await new Promise<void>(resolve => setTimeout(resolve, 200))
-        this.openFiles.add(uri)
-        this.publishDiagnostics()
+        const config = this.projectManager.getParentConfiguration(uri)
+        if (!config) {
+            return
+        }
+        config.addToOpenFiles(uri)
+        this._publishDiagnosticsForOpenFiles(uri)
     }
 
     /**
@@ -1575,7 +1572,20 @@ export class TypeScriptService {
         }
         this.projectManager.didChange(uri, text)
         await new Promise<void>(resolve => setTimeout(resolve, 200))
-        this.publishDiagnostics()
+        this._publishDiagnosticsForOpenFiles(uri)
+    }
+    
+    /**
+     * Generates and publishes diagnostics for all currently open files in project
+     * 
+     * @param uri URI of the currently open/changed file
+     */    
+     private _publishDiagnosticsForOpenFiles(uri: string) {
+        const config = this.projectManager.getParentConfiguration(uri)
+        if (!config) {
+            return
+        }
+        config.getOpenFiles().forEach(fileUri => this._publishDiagnostics(config, fileUri))
     }
 
     /**
@@ -1583,11 +1593,7 @@ export class TypeScriptService {
      *
      * @param uri URI of the file to check
      */
-    private _publishDiagnostics(uri: string, span = new Span()): void {
-        const config = this.projectManager.getParentConfiguration(uri)
-        if (!config) {
-            return
-        }
+    private _publishDiagnostics(config: ProjectConfiguration, uri: string, span = new Span()): void {
         const fileName = uri2path(uri)
         const tsDiagnostics = config
             .getService()
@@ -1614,10 +1620,6 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
         this.projectManager.didSave(uri)
     }
-    
-    public publishDiagnostics() {
-        this.openFiles.forEach(uri => this._publishDiagnostics(uri))
-    }
 
     /**
      * The document close notification is sent from the client to the server when the document got
@@ -1630,8 +1632,12 @@ export class TypeScriptService {
         // Ensure files needed to suggest completions are fetched
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
 
+        const config = this.projectManager.getParentConfiguration(uri)
+        if (!config) {
+            return
+        }
         this.projectManager.didClose(uri)
-        this.openFiles.delete(uri)
+        config.deleteFromOpenFiles(uri)
 
         // Clear diagnostics
         this.client.textDocumentPublishDiagnostics({ uri, diagnostics: [] })

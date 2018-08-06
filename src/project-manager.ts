@@ -239,6 +239,11 @@ export class ProjectConfiguration {
     private expectedFilePaths = new Set<string>()
 
     /**
+     * List of uris for all files currently open in the editor
+     */
+    public openFiles: Set<string> = new Set<string>()
+
+    /**
      * List of resolved extra root directories to allow global type declaration files to be loaded from.
      * Each item is an absolute UNIX-like file path
      */
@@ -320,6 +325,22 @@ export class ProjectConfiguration {
         }
         return this.host
     }
+    
+    /**
+     * @return currently open files for project
+     */
+    public getOpenFiles() {
+        return this.openFiles
+    }
+    
+    public addToOpenFiles(uri: string) {
+        this.openFiles.add(uri)
+    }
+    
+    public deleteFromOpenFiles(uri: string) {
+        this.openFiles.delete(uri)
+    }
+    
 
     /**
      * Initializes (sub)project by parsing configuration and making proper internal objects
