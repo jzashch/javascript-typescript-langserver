@@ -1075,6 +1075,7 @@ export class ProjectManager implements Disposable {
         if (!config) {
             return
         }
+        config.openFiles.delete(uri)
         config.ensureConfigFile(span)
         config.getHost().incProjectVersion()
     }
