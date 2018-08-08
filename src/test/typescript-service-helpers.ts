@@ -2051,41 +2051,6 @@ export function describeTypeScriptService(
                 uri: rootUri + 'src/valid.ts',
             })
         })
-        
-        it('should add file to open files on didOpen and remove on didClose', async function(this: TestContext & ITestCallbackContext): Promise<
-            void
-        > {
-            await this.service.textDocumentDidOpen({
-                textDocument: {
-                    uri: rootUri + 'src/errors.ts',
-                    languageId: 'typescript',
-                    text: 'const text: string = 33;',
-                    version: 1,
-                },
-            })
-            
-            await this.service.textDocumentDidOpen({
-                textDocument: {
-                    uri: rootUri + 'src/valid.ts',
-                    languageId: 'typescript',
-                    text: 'const validText: string = "valid text";',
-                    version: 1,
-                },
-            })
-            sinon.assert.match(this.service.openFiles.has(rootUri + 'src/valid.ts'), true);
-            sinon.assert.match(this.service.openFiles.has(rootUri + 'src/errors.ts'), true);
-            sinon.assert.match(this.service.openFiles.size, 2);
-            
-            await this.service.textDocumentDidClose({
-                textDocument: {
-                    uri: rootUri + 'src/errors.ts',
-                },
-            })
-            
-            sinon.assert.match(this.service.openFiles.has(rootUri + 'src/valid.ts'), true);
-            sinon.assert.match(this.service.openFiles.has(rootUri + 'src/errors.ts'), false);
-            sinon.assert.match(this.service.openFiles.size, 1);
-        })
 
         it('should publish diagnostics on didChange', async function(this: TestContext & ITestCallbackContext): Promise<
             void

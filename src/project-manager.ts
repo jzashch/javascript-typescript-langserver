@@ -239,9 +239,9 @@ export class ProjectConfiguration {
     private expectedFilePaths = new Set<string>()
 
     /**
-     * List of uris for all files currently open in the editor
+     * Set of uris for all files currently open in the editor
      */
-    public openFiles: Set<string> = new Set<string>()
+    public readonly openFiles: Set<string> = new Set<string>()
 
     /**
      * List of resolved extra root directories to allow global type declaration files to be loaded from.
@@ -325,22 +325,6 @@ export class ProjectConfiguration {
         }
         return this.host
     }
-    
-    /**
-     * @return currently open files for project
-     */
-    public getOpenFiles() {
-        return this.openFiles
-    }
-    
-    public addToOpenFiles(uri: string) {
-        this.openFiles.add(uri)
-    }
-    
-    public deleteFromOpenFiles(uri: string) {
-        this.openFiles.delete(uri)
-    }
-    
 
     /**
      * Initializes (sub)project by parsing configuration and making proper internal objects
@@ -1070,6 +1054,11 @@ export class ProjectManager implements Disposable {
      * @param text file's content
      */
     public didOpen(uri: string, text: string): void {
+        const config = this.getParentConfiguration(uri)
+        if (!config) {
+            return
+        }
+        config.openFiles.add(uri)
         this.didChange(uri, text)
     }
 

@@ -213,7 +213,7 @@ export class TypeScriptService {
 
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         this.logger = new LSPLogger(client)
-
+    }
     /**
      * The initialize request is sent as the first request from the client to the server. If the
      * server receives request or notification before the `initialize` request it should act as
@@ -1545,11 +1545,6 @@ export class TypeScriptService {
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
         this.projectManager.didOpen(uri, params.textDocument.text)
         await new Promise<void>(resolve => setTimeout(resolve, 200))
-        const config = this.projectManager.getParentConfiguration(uri)
-        if (!config) {
-            return
-        }
-        config.addToOpenFiles(uri)
         this._publishDiagnosticsForOpenFiles(uri)
     }
 
@@ -1585,7 +1580,7 @@ export class TypeScriptService {
         if (!config) {
             return
         }
-        config.getOpenFiles().forEach(fileUri => this._publishDiagnostics(config, fileUri))
+        config.openFiles.forEach(fileUri => this._publishDiagnostics(config, fileUri))
     }
 
     /**
@@ -1632,13 +1627,7 @@ export class TypeScriptService {
         // Ensure files needed to suggest completions are fetched
         await this.projectManager.ensureReferencedFiles(uri).toPromise()
 
-        const config = this.projectManager.getParentConfiguration(uri)
-        if (!config) {
-            return
-        }
         this.projectManager.didClose(uri)
-        config.deleteFromOpenFiles(uri)
-
         // Clear diagnostics
         this.client.textDocumentPublishDiagnostics({ uri, diagnostics: [] })
     }
